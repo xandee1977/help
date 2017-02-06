@@ -1,6 +1,6 @@
 # Help
 
-A project to meke people help other people
+A project to make people help other people
 
 == Primary Structure ==
 
