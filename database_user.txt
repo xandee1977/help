@@ -1,0 +1,8 @@
+# Criando esquema publico e dando permissão para o usuário 'help
+CREATE SCHEMA public;
+CREATE USER help PASSWORD 'help';
+GRANT ALL ON SCHEMA public TO help;
+GRANT ALL ON ALL TABLES IN SCHEMA public TO help;
+
+psql -d postgres;
+create database help;

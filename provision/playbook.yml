@@ -1,0 +1,166 @@
+---
+- hosts: all
+  remote_user: vagrant
+  become: yes
+  become_user: root
+  
+  tasks:
+      - name: Add dotdeb key
+        apt_key:
+            url=https://www.dotdeb.org/dotdeb.gpg
+            state=present
+
+      - name: Add dotdeb repository
+        apt_repository: 
+            repo='deb http://packages.dotdeb.org jessie all'
+            state=present
+            update_cache=yes
+
+      - name: Add nginx key
+        apt_key:
+            url=https://nginx.org/keys/nginx_signing.key
+            state=present
+
+      - name: Add nginx repository
+        apt_repository:
+            repo='deb http://nginx.org/packages/debian/ jessie nginx'
+            state=present
+
+      - name: Install nginx
+        apt: name=nginx state=latest
+
+      - name: Install php
+        apt: name={{ item }} state=present
+        with_items:
+            - php7.0
+            - php7.0-xdebug
+            - php7.0-fpm
+            - php7.0-intl
+            - php7.0-pgsql
+            - php7.0-mbstring
+            - php7.0-dom
+            - php7.0-zip
+        notify:
+            - restart nginx
+            - restart php-fpm
+
+      - name: Create sites-enabled
+        file: 
+            dest=/etc/nginx/sites-enabled 
+            mode=755 
+            owner=root 
+            group=root 
+            state=directory
+      
+      - name: Create sites-available
+        file: 
+            dest=/etc/nginx/sites-available 
+            mode=755 
+            owner=root 
+            group=root 
+            state=directory
+
+      - name: Configure Nginx
+        template: src=nginx.conf.j2 dest=/etc/nginx/nginx.conf
+        notify:
+            - restart nginx
+
+      - name: Configure Nginx virtualhost
+        template: src=adrenalina.j2 dest=/etc/nginx/sites-available/adrenalina.conf
+        notify:
+            - restart nginx
+
+      - name: Enable adrenalina Virtualhost
+        file: 
+            src=/etc/nginx/sites-available/adrenalina.conf
+            dest=/etc/nginx/sites-enabled/10-adrenalina.conf
+            state=link
+        notify:
+            - restart nginx
+            - restart php-fpm
+
+      - name: Add Postgresql repository key
+        apt_key: url='https://www.postgresql.org/media/keys/ACCC4CF8.asc' state=present
+
+      - name: Add postgresql repository
+        apt_repository:
+            repo='deb http://apt.postgresql.org/pub/repos/apt jessie-pgdg main'
+            state=present
+            update_cache=yes
+
+      - name: Install postgresql
+        apt: name={{ item }} state=present
+        with_items:
+             - postgresql-9.5
+             - postgresql-client-9.5
+             - postgresql-client-common
+             - ssl-cert
+
+      - name: Configure postgresql.conf
+        template: src=postgresql.conf.j2 dest=/etc/postgresql/9.5/main/postgresql.conf
+        notify:
+            - restart postgresql
+
+      - name: Configure pg_hba.conf
+        template: src=pg_hba.conf.j2 dest=/etc/postgresql/9.5/main/pg_hba.conf
+        notify:
+            - restart postgresql
+
+      - name: Create User Adrenalina
+        command: /usr/bin/psql -c "
+            DO $body$
+            BEGIN
+                CREATE USER adrenalina WITH PASSWORD 'adrenalina';
+            EXCEPTION WHEN others THEN
+            END $body$
+            "
+        become_user: postgres
+
+      - name: Create Database adrenalina
+        command: /usr/bin/psql -c "
+            DO $body$
+            BEGIN
+                CREATE DATABASE adrenalina OWNER adrenalina;
+            EXCEPTION WHEN others THEN
+            END $body$
+            "
+        become_user: postgres
+
+      - name: Install vim
+        apt: name=vim state=latest
+
+      - name: Install git
+        apt: name=git state=latest
+
+      - name: Install htop
+        apt: name=htop state=latest
+
+      - name: get php composer
+        get_url:
+            url=https://getcomposer.org/composer.phar
+            dest=/tmp/composer.phar
+
+      - name: Install php composer
+        shell: mv /tmp/composer.phar /usr/local/bin/composer
+        args:
+            creates: /usr/local/bin/composer
+
+      - name: Set permission to composer
+        file:
+            path: /usr/local/bin/composer
+            mode: a+x
+            state: file
+        tags: composer
+
+  handlers:
+        - name: restart nginx
+          service: name=nginx state=restarted
+
+        - name: restart php-fpm
+          service: name=php7.0-fpm state=restarted
+
+        - name: restart postgresql
+          service: name=postgresql state=restarted
+
+        - name: restart beanstalkd
+          service: name=beanstalkd state=restarted

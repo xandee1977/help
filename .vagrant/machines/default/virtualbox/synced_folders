@@ -1,1 +1,1 @@
-{"virtualbox":{"/var/www/html":{"guestpath":"/var/www/html","hostpath":"/home/alexandre/www/help","disabled":false,"__vagrantfile":true},"/vagrant":{"guestpath":"/vagrant","hostpath":"/home/alexandre/www/help","disabled":false,"__vagrantfile":true}}}
+{"virtualbox":{"/var/www":{"group":"www-data","owner":"vagrant","mount_option":["dmode=777,fmode=664"],"guestpath":"/var/www","hostpath":"/home/alexandre/www/help","disabled":false,"__vagrantfile":true},"/vagrant":{"guestpath":"/vagrant","hostpath":"/home/alexandre/www/help","disabled":false,"__vagrantfile":true}}}
